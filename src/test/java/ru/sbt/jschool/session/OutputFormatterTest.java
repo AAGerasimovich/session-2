@@ -52,6 +52,7 @@ public class OutputFormatterTest {
     }
 
 
+
     private void doTest(String dir) throws Exception {
         Scanner sc = new Scanner(OutputFormatterTest.class.getResourceAsStream("/" + dir + "/input.csv"));
 
