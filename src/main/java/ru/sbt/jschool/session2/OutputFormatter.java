@@ -21,38 +21,28 @@ package ru.sbt.jschool.session2;
 import java.io.PrintStream;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.text.SimpleDateFormat;
 import java.util.*;
 
 
 /**
  */
-public class OutputFormatter {
-
-
+public class OutputFormatter  implements DateFormat, NumberFormat, MoneyFormat, StringFormat{
 
 
     private PrintStream out;
     private String sepH = "-";
     private String sepV = "|";
     private String sepC = "+";
-    private String[] types;
-    private int[] maxLenColm;
-
 
     public OutputFormatter(PrintStream out) {
         this.out = out;
     }
 
-
-
-    private void setMaxLenColms(String[] names, Object[][] data) {
-
-        maxLenColm = new int[names.length];
-        types = new String[names.length];
+    private void setMaxLenColms(String[] names, Object[][] data, int[] maxLenColm, String[] types) {
 
         for (int i = 0; i < names.length; ++i) {
                 maxLenColm[i] = names[i].length();
-
         }
 
         for (int i = 0; i < data.length; ++i){
@@ -60,14 +50,18 @@ public class OutputFormatter {
             for (int j = 0; j < names.length; ++j) {
                 if (data[i][j] instanceof String) {
                     String s = (String) data[i][j];
-                    if (maxLenColm[j] < s.length()) {
-                        maxLenColm[j] = s.length();
+                    if (s.length()<15) {
+                        if (maxLenColm[j] < s.length() ) {
+                            maxLenColm[j] = s.length();
+                        }
+                    } else {
+                        maxLenColm[j] = 15;
                     }
                     if (types[j] == null) {
                         types[j] = "string";
                     }
-
                 }
+
                 if (data[i][j] instanceof Integer) {
                     Integer n = (Integer) data[i][j];
                     maxLenColm[j] = Math.max(maxLenColm[j], getLenNumber(n));
@@ -75,7 +69,6 @@ public class OutputFormatter {
                         types[j] = "number";
                     }
                 }
-
 
                 if (data[i][j] instanceof Double) {
                     Double d = (Double) data[i][j];
@@ -86,11 +79,9 @@ public class OutputFormatter {
                     }
                 }
 
-
-
                 if (data[i][j] instanceof Date) {
-                    if (maxLenColm[j] < 10) {
-                        maxLenColm[j] = 10;
+                    if (maxLenColm[j] < "dd.MM.yyyy HH:mm.SS.sss".length()) {
+                        maxLenColm[j] = "dd.MM.yyyy HH:mm.SS.sss".length();
                     }
                     if (types[j] == null) {
                         types[j] = "date";
@@ -98,9 +89,7 @@ public class OutputFormatter {
                 }
             }
         }
-
     }
-
 
     private int getLenNumber(Integer n){
         int len;
@@ -110,7 +99,6 @@ public class OutputFormatter {
         } else {
             len = n.toString().length();
         }
-
         if (n.toString().length()%3 == 0 && len>3){
             len--;
         }
@@ -118,26 +106,36 @@ public class OutputFormatter {
 
     }
     public void output(String[] names, Object[][] data) {
-        this.setMaxLenColms(names, data);
-        String separator = sepC;
+
+        int[] maxLenColm = new int[names.length];
+        String[] types = new String[names.length];
+
+        this.setMaxLenColms(names, data, maxLenColm, types);
+
+        StringBuilder s = new StringBuilder();
+
+        String separator;
+        s.append(sepC);
         for (int i = 0; i< maxLenColm.length; ++i){
             for(int j = 0; j < maxLenColm[i]; ++j){
-                separator += sepH;
+                s.append(sepH);
             }
-            separator += sepC;
+            s.append(sepC);
         }
+        separator = s.toString();
         this.out.println(separator);
         this.out.print(sepV);
 
         for(int j = 0; j < names.length; ++j) {
-            String s = names[j];
+            StringBuilder name = new StringBuilder();
             int k = (maxLenColm[j]-names[j].length())/2;
             while (k>0){
-                s =" "  +  s;
+                name.append(" ");
                 k--;
             }
+            name.append(names[j]);
             String  f = "%" + -maxLenColm[j]+ "s|";
-            this.out.printf(f, s);
+            this.out.printf(f, name.toString());
         }
         this.out.println("");
         for(int i = 0; i < data.length; ++i){
@@ -146,73 +144,72 @@ public class OutputFormatter {
             this.out.print(sepV);
 
             for(int j = 0; j < names.length; ++j) {
-
-                swichPrint(data[i][j], j);
-
+                swichPrint(data[i][j], maxLenColm[j], types[j]);
+                this.out.print(sepV);
             }
             this.out.println("");
         }
         this.out.println(separator);
-
     }
 
-    private  void swichPrint(Object data, int i){
+    private  void swichPrint(Object data, int len, String type ){
 
         if (data instanceof String) {
-            stringPrint((String) data, i);
+            this.out.print(getStringFormat((String) data, len));
         }else
         if (data instanceof Integer) {
-            numberPrint((int) data, i);
+            this.out.print(getNumberFormat((int) data, len));
         }else
         if (data instanceof Date) {
-            datePrint((Date) data, i);
+            this.out.print(getDateFormat((Date) data));
         }else
         if (data instanceof Double) {
-            moneyPrint((Double) data, i);
+            this.out.print(getMoneyFormat((Double) data, len));
         }else
-            nullPrint(i);
-
-
+            nullPrint(type, len);
         }
 
-    private void numberPrint(int num, int i) {
+    public String getNumberFormat(int num, int i) {
 
-        String format = "%," + maxLenColm[i] + "d" +"%s";
-        this.out.printf(format, num , sepV);
-
+        String format = "%," + i + "d";
+        return String.format(format, num );
     }
 
-    private void datePrint(Date d, int i){
+    public String getDateFormat(Date d){
 
-        Formatter f = new Formatter();
-        f.format("%td%s%tm%s%tY|", d, ".",d,"." ,d);
-        this.out.print(f);
+        SimpleDateFormat dateFormat = new SimpleDateFormat("dd.MM.yyyy HH:mm.SS.sss");
+        System.out.println();
+
+//        Formatter f = new Formatter();
+//        f.format("%td%s%tm%s%tY|", d, ".",d,"." ,d);
+        return (dateFormat.format(d));
     }
 
-    private void moneyPrint(Double d, int i){
+    public String getMoneyFormat(Double d, int i){
         d = new BigDecimal(d).setScale(2, RoundingMode.HALF_EVEN).doubleValue();
-        String s = "%," + maxLenColm[i] +".2f%s";
+        String s = "%," + i +".2f";
         Formatter f = new Formatter();
-        f.format(s, d, sepV);
+        f.format(s, d);
 
-        this.out.print(f);
+        return f.toString();
     }
-    private void stringPrint(String str, int i) {
 
-        String format = "%" + -maxLenColm[i] + "s" + "%s";
-        this.out.printf(format,  str , sepV);
+    public String getStringFormat(String str, int i) {
 
+        String format = "%" + -i + "s" ;
+        if (str.length()<=15) {
+            return String.format(format, str);
+        } else {
+            return (str.subSequence(0, 12)+"...");
+        }
     }
-    private void nullPrint(int i) {
+
+    private void nullPrint(String type, int len) {
         String format;
-        if (types[i].equals("money") || types[i].equals("number")){
-             format = "%" + maxLenColm[i] + "s%s";
-        } else  format = "%" + -maxLenColm[i] + "s%s";
+        if (type.equals("money") || type.equals("number")){
+             format = "%" + len + "s";
+        } else  format = "%" + -len + "s";
 
-
-        this.out.printf(format,  "-", sepV);
-
+        this.out.printf(format,  "-");
     }
-
-
 }

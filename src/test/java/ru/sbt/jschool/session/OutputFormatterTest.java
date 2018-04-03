@@ -82,6 +82,12 @@ public class OutputFormatterTest {
 
             formatter.output(names, data);
         }
+        try(FileOutputStream output = new FileOutputStream(new File("test1" + dir + ".txt"))) {
+            OutputFormatter outFrm = new OutputFormatter(new PrintStream(output));
+
+            outFrm.output(names, data);
+        }
+
 
         try (Scanner actualOutput = new Scanner(temp);
              Scanner expectedOutput = new Scanner(OutputFormatterTest.class.getResourceAsStream("/" + dir + "/output.txt"))) {
