@@ -27,7 +27,7 @@ import java.util.*;
 
 /**
  */
-public class OutputFormatter  implements DateFormat, NumberFormat, MoneyFormat, StringFormat{
+public class OutputFormatter  implements Formatter {
 
 
     private PrintStream out;
@@ -188,7 +188,7 @@ public class OutputFormatter  implements DateFormat, NumberFormat, MoneyFormat, 
     public String getMoneyFormat(Double d, int i){
         d = new BigDecimal(d).setScale(2, RoundingMode.HALF_EVEN).doubleValue();
         String s = "%," + i +".2f";
-        Formatter f = new Formatter();
+        java.util.Formatter f = new java.util.Formatter();
         f.format(s, d);
 
         return f.toString();
